@@ -1,6 +1,8 @@
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace TaskManagementApi.Services
 {
@@ -14,7 +16,7 @@ namespace TaskManagementApi.Services
         {
             var factory = new ConnectionFactory()
             {
-                HostName = configuration.GetConnectionString("RabbitMQ") ?? "localhost",
+                HostName = configuration["ConnectionStrings:RabbitMQ"] ?? "localhost",
                 Port = 5672,
                 UserName = "guest",
                 Password = "guest"
@@ -32,12 +34,36 @@ namespace TaskManagementApi.Services
                     exclusive: false,
                     autoDelete: false,
                     arguments: null);
+
+                StartConsuming();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to connect to RabbitMQ: {ex.Message}");
                 // For development purposes, we'll continue without RabbitMQ
             }
+        }
+
+        private void StartConsuming()
+        {
+            if (_channel == null)
+            {
+                Console.WriteLine("RabbitMQ channel is not available for consuming.");
+                return;
+            }
+
+            var consumer = new EventingBasicConsumer(_channel);
+            consumer.Received += (model, ea) =>
+            {
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                Console.WriteLine($" [x] Received {message}");
+
+                _channel.BasicAck(ea.DeliveryTag, false);
+            };
+
+            _channel.BasicConsume(queue: _queueName, autoAck: false, consumer: consumer);
+            Console.WriteLine("RabbitMQ consumer started.");
         }
         
         public async Task PublishTaskAssignmentNotificationAsync(Guid userId, Guid taskId, string taskTitle)
@@ -86,4 +112,3 @@ namespace TaskManagementApi.Services
         }
     }
 }
-
