@@ -97,20 +97,36 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<TaskManagementContext>();
     var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
-    
+
     if (!context.Users.Any())
     {
-        var defaultUser = new TaskManagementApi.Models.User
+        var defaultUsers = new List<TaskManagementApi.Models.User>
         {
-            Username = "admin",
-            Email = "admin@example.com",
-            Password = authService.HashPassword("admin123")
+            new TaskManagementApi.Models.User
+            {
+                Username = "admin",
+                Email = "admin@example.com",
+                Password = authService.HashPassword("admin123")
+            },
+            new TaskManagementApi.Models.User
+            {
+                Username = "user1",
+                Email = "user1@example.com",
+                Password = authService.HashPassword("user123")
+            },
+            new TaskManagementApi.Models.User
+            {
+                Username = "user2",
+                Email = "user2@example.com",
+                Password = authService.HashPassword("user123")
+            }
         };
-        
-        context.Users.Add(defaultUser);
+
+        context.Users.AddRange(defaultUsers);
         context.SaveChanges();
     }
 }
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
